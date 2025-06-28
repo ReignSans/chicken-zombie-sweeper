@@ -36,3 +36,35 @@
     transform: rotate(360deg);
   }
 }
+
+.container {
+    text-align: center;
+    justify-content: center;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(6, 60px);
+    gap: 4px;
+    justify-content: center;
+}
+
+button {
+    background-color:  rgb(30, 92, 128);
+    color:white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 1rem;
+    border-top: 1rem;
+    height: 50px;
+    width: 200px;
+    font-size: 20px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.winner {
+  color: green;
+  font-weight: bolder;
+}
