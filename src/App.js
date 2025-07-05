@@ -3,70 +3,81 @@ import './App.css';
 import chickenImage from './assets/chicken.jpg';
 import zombieImage from './assets/zombie.jpg';
 
-
 const chicken_image = chickenImage;
 const zombie_image = zombieImage;
 
-function boardGenerate() {
-    const images = Array(18).fill({ type: 'chicken', img: chicken_image })
-        .concat(Array(18).fill({ type: 'zombie', img: zombie_image }));
-
-    for (let i = images.length - 1; i > 0; i--) {
+function shuffle(array) {
+    let arr = array.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [images[i], images[j]] = [images[j], images[i]];
+        [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    return images;
+    return arr;
+}
+
+function boardGenerate() {
+    // 18 chickens, 18 zombies, shuffled
+    const chickens = Array(18).fill({ type: 'chicken', img: chicken_image });
+    const zombies = Array(18).fill({ type: 'zombie', img: zombie_image });
+    return shuffle([...chickens, ...zombies]);
 }
 
 function App() {
-    const [images, setImages] = useState(boardGenerate());
+    const [userChoice, setUserChoice] = useState(null); // 'chicken' or 'zombie'
+    const [images, setImages] = useState([]);
     const [revealed, setRevealed] = useState(Array(36).fill(false));
-    const [player, setPlayer] = useState('chicken');
     const [gameOver, setGameOver] = useState(false);
-    const [winner, setWinner] = useState('');
-    const [scores, setScores] = useState({ chicken: 0, zombie: 0 });
+    const [win, setWin] = useState(false);
+    const [foundCount, setFoundCount] = useState(0);
+    const [chickenScore, setChickenScore] = useState(0);
+    const [zombieScore, setZombieScore] = useState(0);
 
-    const chickenLeft = images.filter((tile, i) => tile.type === 'chicken' && !revealed[i]).length;
-    const zombieLeft = images.filter((tile, i) => tile.type === 'zombie' && !revealed[i]).length;
+    function handleUserChoice(choice) {
+        setUserChoice(choice);
+        setImages(boardGenerate());
+        setRevealed(Array(36).fill(false));
+        setGameOver(false);
+        setWin(false);
+        setFoundCount(0);
+    }
 
-    function handleTileClick(click) {
-        if (gameOver || revealed[click]) return;
+    function handleTileClick(idx) {
+        if (gameOver || revealed[idx]) return;
+        const updatedRevealed = [...revealed];
+        updatedRevealed[idx] = true;
+        setRevealed(updatedRevealed);
 
-        if (images[click].type === player) {
-            const updatedRevealed = [...revealed];
-            updatedRevealed[click] = true;
-            setRevealed(updatedRevealed);
-
-            if (player === 'chicken' && chickenLeft === 1) {
+        if (images[idx].type === userChoice) {
+            const newCount = foundCount + 1;
+            setFoundCount(newCount);
+            if (newCount === 18) {
                 setGameOver(true);
-                setWinner('Chicken Player');
-                setScores(prev => ({ ...prev, chicken: prev.chicken + 1 }));
-            } else if (player === 'zombie' && zombieLeft === 1) {
-                setGameOver(true);
-                setWinner('Zombie Player');
-                setScores(prev => ({ ...prev, zombie: prev.zombie + 1 }));
-            } else {
-                setPlayer(player === 'chicken' ? 'zombie' : 'chicken');
+                setWin(true);
+                if (userChoice === 'chicken') {
+                    setChickenScore(score => score + 1);
+                } else {
+                    setZombieScore(score => score + 1);
+                }
             }
         } else {
             setGameOver(true);
-
-            const winPlayer = player === 'chicken' ? 'Zombie Player' : 'Chicken Player';
-            setWinner(winPlayer);
-            setScores(prev =>
-                player === 'chicken'
-                ? { ...prev, zombie: prev.zombie + 1 }
-                : { ...prev, chicken: prev.chicken + 1 }
-            );
+            setWin(false);
+            // Opponent scores when player loses
+            if (userChoice === 'chicken') {
+                setZombieScore(score => score + 1);
+            } else {
+                setChickenScore(score => score + 1);
+            }
         }
     }
 
     function handleRestart() {
-        setImages(boardGenerate());
+        setUserChoice(null);
+        setImages([]);
         setRevealed(Array(36).fill(false));
         setGameOver(false);
-        setWinner('');
-        setPlayer('chicken');
+        setWin(false);
+        setFoundCount(0);
     }
 
     return (
@@ -75,44 +86,65 @@ function App() {
                 <span className="chicken-header">Chicken </span>
                 <span className="zombie-header">Jockey (Chicken vs. Zombie) Game</span>
             </h1>
-            <div>
-                <b>Score:</b> 
-                <span> Chicken: {scores.chicken}</span>
-                <span> |</span>
-                <span> Zombie: {scores.zombie}</span>
+            <div style={{ marginBottom: 20 }}>
+                <span style={{ marginRight: 30 }}>
+                    <img src={chicken_image} alt="Chicken" style={{ width: 30, height: 30, verticalAlign: 'middle' }} /> 
+                    <b>Chicken Score:</b> {chickenScore}
+                </span>
+                <span>
+                    <img src={zombie_image} alt="Zombie" style={{ width: 30, height: 30, verticalAlign: 'middle' }} /> 
+                    <b>Zombie Score:</b> {zombieScore}
+                </span>
             </div>
-        <p>
-            Two players: <b>Chicken</b> and <b>Banana</b>.<br />
-            {gameOver
-            ? <span className='winner'>{winner} wins!</span>
-            : <>Current turn: <b>{player.charAt(0).toUpperCase() + player.slice(1)} Player</b></>
-            }
-        </p>
-        <div className='grid'>
-            {images.map((tile, idx) => (
-            <button
-                key={idx}
-                className="square"
-                style={{
-                    width: 60,
-                    height: 60,
-                    background: revealed[idx] ? '#f0f0f0' : '#ddd',
-                    border: '2px solid #000000',
-                    cursor: gameOver || revealed[idx] ? 'not-allowed' : 'pointer',
-                    padding: 0,
-                }}
-                onClick={() => handleTileClick(idx)}
-                disabled={gameOver || revealed[idx]}
-            >
-                {revealed[idx] ? (
-                <img src={tile.img} alt={tile.type} style={{ width: '90%', height: '90%' }} />
-                ) : (
-                <span style={{ fontSize: 18 }}>{idx + 1}</span>
-                )}
-            </button>
-            ))}
-        </div>
-        <button className = 'restart' onClick={handleRestart}>Restart Game</button>
+            {!userChoice ? (
+                <>
+                    <p>Choose your side:</p>
+                    <button className='button' onClick={() => handleUserChoice('chicken')}>
+                        <img src={chicken_image} alt="Chicken" style={{ width: 30, height: 30 }} /> Chicken
+                    </button>
+                    <button className='button' onClick={() => handleUserChoice('zombie')}>
+                        <img src={zombie_image} alt="Zombie" style={{ width: 30, height: 30 }} /> Zombie
+                    </button>
+                </>
+            ) : (
+                <>
+                    <p>
+                        You chose: <b>{userChoice.charAt(0).toUpperCase() + userChoice.slice(1)}</b>
+                        <br />
+                        {gameOver ? (
+                            win ? <span className='winner'>You win! All {userChoice}s found!</span>
+                                : <span className='loser'>You lose! You clicked a {userChoice === 'chicken' ? 'Zombie' : 'Chicken'}!</span>
+                        ) : (
+                            <>Your {userChoice}s found: <b>{foundCount}/18</b></>
+                        )}
+                    </p>
+                    <div className='grid'>
+                        {images.map((tile, idx) => (
+                            <button
+                                key={idx}
+                                className="square"
+                                style={{
+                                    width: 60,
+                                    height: 60,
+                                    background: revealed[idx] ? '#f0f0f0' : '#ddd',
+                                    border: '2px solid #000000',
+                                    cursor: gameOver || revealed[idx] ? 'not-allowed' : 'pointer',
+                                    padding: 0,
+                                }}
+                                onClick={() => handleTileClick(idx)}
+                                disabled={gameOver || revealed[idx]}
+                            >
+                                {revealed[idx] ? (
+                                    <img src={tile.img} alt={tile.type} style={{ width: '90%', height: '90%' }} />
+                                ) : (
+                                    <span style={{ fontSize: 18 }}>{idx + 1}</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                    <button className='button' onClick={handleRestart}>Restart Game</button>
+                </>
+            )}
         </div>
     );
 }
